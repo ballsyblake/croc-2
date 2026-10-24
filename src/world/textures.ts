@@ -73,6 +73,6 @@ export function labelSprite(text: string, color = '#ffffff'): THREE.Sprite {
   tex.minFilter = THREE.NearestFilter;
   tex.colorSpace = THREE.SRGBColorSpace;
   const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, fog: true }));
-  sprite.scale.set(1.6, 0.8, 1);
+  sprite.scale.set(2.4, 1.2, 1);
   return sprite;
 }

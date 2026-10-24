@@ -142,7 +142,7 @@ export class Player {
     const canGroundJump = this.grounded || (this.coyote > 0 && !this.jumpedSinceGround);
     if (this.jumpBuffer > 0) {
       if (canGroundJump) {
-        this.velocity.y = Math.sqrt(2 * p.gravity * p.jumpHeight);
+        this.velocity.y = launchSpeed(p.gravity, p.jumpHeight, dt);
         this.jumpedSinceGround = true;
         this.coyote = 0;
         this.jumpBuffer = 0;
@@ -151,7 +151,7 @@ export class Player {
         this.pendingJumpKind = 1;
         this.onEvent({ type: 'jump', kind: 1 });
       } else if (!this.grounded && !this.doubleJumpUsed) {
-        this.velocity.y = Math.sqrt(2 * p.gravity * p.doubleJumpHeight);
+        this.velocity.y = launchSpeed(p.gravity, p.doubleJumpHeight, dt);
         this.doubleJumpUsed = true;
         this.jumpedSinceGround = true;
         this.coyote = 0;
@@ -247,7 +247,7 @@ export class Player {
   /** Bounce off an enemy's head. Refreshes the double jump. */
   stompBounce(): void {
     const p = TUNING.player;
-    this.velocity.y = Math.sqrt(2 * p.gravity * p.stompBounceHeight);
+    this.velocity.y = launchSpeed(p.gravity, p.stompBounceHeight, 1 / 60);
     this.doubleJumpUsed = false;
     this.spinAirUsed = false;
     this.jumpCutDone = false;
@@ -296,6 +296,15 @@ export class Player {
   restoreHealth(): void {
     this.health = TUNING.player.maxHealth;
   }
+}
+
+/**
+ * Take-off speed that reaches `height` under the fixed-step integrator.
+ * Gravity is applied before the move each step, so the plain sqrt(2gh)
+ * undershoots by about g*dt/2; adding it back keeps config heights truthful.
+ */
+function launchSpeed(gravity: number, height: number, dt: number): number {
+  return Math.sqrt(2 * gravity * height) + gravity * dt * 0.5;
 }
 
 function approachAngle(current: number, target: number, maxStep: number): number {

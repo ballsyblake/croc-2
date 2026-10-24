@@ -66,6 +66,7 @@ export class PS1Renderer {
   // Adaptive resolution bookkeeping.
   private sampleTime = 0;
   private sampleFrames = 0;
+  private sampleSqMs = 0;
   private goodSeconds = 0;
   private cooldown = 0;
   /** Each upgrade that had to be undone doubles the wait before the next attempt (stops oscillation). */
@@ -159,16 +160,23 @@ export class PS1Renderer {
     if (!TUNING.render.adaptive || frameDt > 0.25) return;
     this.sampleTime += frameDt;
     this.sampleFrames++;
+    this.sampleSqMs += (frameDt * 1000) ** 2;
     this.cooldown = Math.max(0, this.cooldown - frameDt);
     this.sinceUpgrade += frameDt;
     if (this.sampleTime < 1) return;
 
     const avgMs = (this.sampleTime / this.sampleFrames) * 1000;
+    const stdMs = Math.sqrt(Math.max(0, this.sampleSqMs / this.sampleFrames - avgMs * avgMs));
     this.sampleTime = 0;
     this.sampleFrames = 0;
+    this.sampleSqMs = 0;
     const budget = 1000 / TUNING.render.targetFps;
+    // iOS Low Power Mode (and some 30 Hz displays) cap rAF at a rock-steady
+    // ~33 ms. Lowering resolution can't beat a vsync cap, so ignore it.
+    // A GPU-bound device instead jitters between 16 and 33 ms.
+    const vsyncCapped = avgMs > 30 && avgMs < 36 && stdMs < 2.5;
 
-    if (avgMs > budget * 1.15) {
+    if (avgMs > budget * 1.15 && !vsyncCapped) {
       this.goodSeconds = 0;
       if (this.cooldown <= 0 && this.levelIndex < this.levels.length - 1) {
         this.levelIndex++;
